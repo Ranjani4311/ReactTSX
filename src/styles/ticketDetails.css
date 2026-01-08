@@ -1,0 +1,117 @@
+body, html { 
+  margin: 0; 
+  padding: 0; 
+  height: 100%; 
+  overflow: hidden; 
+  font-family: 'Segoe UI', Tahoma, sans-serif; 
+}
+
+.container { 
+  height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+  color: #333;
+  max-width: none; /* Remove max-width for full coverage */
+  margin: 0; 
+  padding: 0; /* Remove padding for edge-to-edge */
+}
+
+.container-header { 
+  flex: 0 0 auto; /* Fixed height, no grow/shrink */
+  text-align: center; 
+  color: #7c3aed; 
+  margin: 5px 0; /* Remove margin */
+  /* background: rgba(255,255,255,0.1);  */
+ 
+  padding: 10px; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.container-title { 
+  font-size: 2.8em; 
+  margin: 0; 
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
+}
+
+.container-subtitle { 
+  font-size: 1.2em; 
+  margin: 10px 0; 
+  opacity: 0.9; 
+}
+
+
+
+
+.container-main { 
+  flex: 1; /* Grow to fill available space */
+  display: flex; 
+  flex-direction: column; 
+  gap: 0; /* Remove gap to maximize space */
+  overflow: hidden; /* Prevent scrolling */
+  padding: 0 20px 20px; /* Minimal padding for content */
+}
+
+.content{
+  padding: 5px 5px 0px 10px;
+}
+
+.grid-wrapper { 
+  flex: 1; /* Fill remaining main space */
+  height: 100%; 
+  position: relative; /* For absolute positioning if needed */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  overflow: hidden;  
+  margin-bottom: 20px; /* Space for summary card */
+  display: flex; /* Ensure flex context for grid */
+  flex-direction: column;
+}
+
+.e-toolbar .e-tbar-btn { 
+  border-radius: 8px; 
+  margin: 2px; 
+  transition: all 0.2s; 
+}
+
+.e-tbar-btn:hover { 
+  transform: translateY(-1px); 
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+}
+
+.e-dropdown-custom { 
+  border-radius: 8px; 
+}
+
+
+.dialog-content { 
+  margin: 15px 0; 
+}
+
+.dialog-help { 
+  font-size: 0.9em; 
+  color: #666; 
+  margin-bottom: 15px; 
+  font-style: italic; 
+}
+
+.e-custom-dialog .e-dlg-header { 
+  background: linear-gradient(90deg, #667eea, #764ba2); 
+  color: white; 
+  border-radius: 8px 8px 0 0; 
+  font-weight: bold; 
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+.e-dialog-enhanced .e-dlg-content { 
+  padding: 20px; 
+}
+
+.container-footer { 
+  flex: 0 0 auto; /* Fixed at bottom */
+  text-align: center; 
+   color:#7c3aed; 
+  margin: 0; /* Remove margin */
+  
+  font-size: 0.9em;
+}
+
