@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   GridComponent,
@@ -11,45 +12,88 @@ import {
   Inject,
   FilterSettingsModel,
   Column,
-  
 } from '@syncfusion/ej2-react-grids';
 import { DialogComponent } from '@syncfusion/ej2-react-popups';
 import { TextBoxComponent } from '@syncfusion/ej2-react-inputs';
-import { SidebarComponent,TreeViewComponent ,ContextMenuComponent, ClickEventArgs, NodeSelectEventArgs, MenuEventArgs, BeforeOpenCloseMenuEventArgs} from '@syncfusion/ej2-react-navigations';
+import { SidebarComponent, TreeViewComponent, ContextMenuComponent, ClickEventArgs, NodeSelectEventArgs, MenuEventArgs, BeforeOpenCloseMenuEventArgs } from '@syncfusion/ej2-react-navigations';
 
-import { ticketDetails} from '../data/ticketDetails';
+import { ticketDetails } from '../data/ticketDetails';
 import { viewData } from '../data/treeViewData';
 
 import '../styles/ticketDetails.css'
-import { FavoriteItem, GridColumn, TreeNode} from '../types/ticketDetails_type';
+import { FavoriteItem } from '../types/ticketDetails_type';
+
+// ────────────────────────────────────────────────────────────────
+// DEFAULT COLOR MAPPINGS
+// ────────────────────────────────────────────────────────────────
+const DEFAULT_STATUS_COLORS = {
+  "open": "oklch(43.2% 0.232 292.759)",
+  "closed": "oklch(52.7% 0.154 150.069)",
+  "waiting for customer": "oklch(66.6% 0.179 58.318)",
+  "resolved": "oklch(58.8% 0.158 241.966)",
+  "default": "#000000"
+};
+
+const DEFAULT_PRIORITY_COLORS = {
+  "high": "oklch(55.3% 0.195 38.402)",
+  "medium": "oklch(44.8% 0.119 151.328)",
+  "low": "oklch(44.2% 0.017 285.786)",
+  "critical": "oklch(57.7% 0.245 27.325)",
+  "premium": "oklch(44.3% 0.11 240.79)"   // note: corrected "primium" → "premium"
+};
+
+// ────────────────────────────────────────────────────────────────
+// Template Factories
+// ────────────────────────────────────────────────────────────────
+function createStatusTemplate(colors: Record<string, string>) {
+  return function statusTemplate(props: any) {
+    const status = (props?.status || "").toLowerCase().trim();
+    const color = colors[status] || colors["default"] || "#000000";
+
+    return (
+      <span style={{ fontWeight: 600, color }}>
+        {props.status || "-"}
+      </span>
+    );
+  };
+}
+
+function createPriorityTemplate(colors: Record<string, string>) {
+  return function priorityTemplate(props: any) {
+    const priority = (props?.priority || "").toLowerCase().trim();
+    const color = colors[priority] || "#000000";
+
+    return (
+      <span style={{ fontWeight: 600, color }}>
+        {props.priority || "-"}
+      </span>
+    );
+  };
+}
 
 function App() {
-   const gridRef = useRef<GridComponent | null>(null);
+  const gridRef = useRef<GridComponent | null>(null);
   const dialogRef = useRef<DialogComponent | null>(null);
   const treeViewRef = useRef<TreeViewComponent | null>(null);
   const textboxObj = useRef<TextBoxComponent | null>(null);
-  const menuObj = useRef<ContextMenuComponent | null>(null)
- 
+  const menuObj = useRef<ContextMenuComponent | null>(null);
 
   const [visible, setVisible] = useState(false);
   const [gridVersion] = useState('v.0');
-  
+
   const gridId = 'gridTicketDetails';
-  
+
   let TreeViewfields = { dataSource: viewData, id: 'nodeId', text: 'nodeText', child: 'nodeChild' };
   let contextmenuItem = [
-        { text: 'Remove View' },
-    ];
- 
-//column configuaration
-  const columns = useMemo(
+    { text: 'Remove View' },
+  ];
+
+  // Base columns (templates will be injected dynamically)
+  const baseColumns = useMemo(
     () => [
       { field: "ticket_id", headerText: "Ticket ID", width: 180, textAlign: "Right" },
       { field: "subject", headerText: "Subject", width: 320 },
-      { field: "status", 
-        headerText: "Status", 
-        width: 200,
-      },
+      { field: "status", headerText: "Status", width: 200 },
       { field: "priority", headerText: "Priority", width: 180 },
       { field: "category", headerText: "Category", width: 200 },
       { field: "reporter", headerText: "Reporter", width: 200 },
@@ -60,7 +104,21 @@ function App() {
     []
   );
 
-  //Toolbar configuration
+  const [columns, setColumns] = useState(baseColumns);
+
+  // Initialize default templates on mount
+  useEffect(() => {
+    setColumns(prev => prev.map(col => {
+      if (col.field === "status") {
+        return { ...col, template: createStatusTemplate(DEFAULT_STATUS_COLORS) };
+      }
+      if (col.field === "priority") {
+        return { ...col, template: createPriorityTemplate(DEFAULT_PRIORITY_COLORS) };
+      }
+      return col;
+    }));
+  }, []);
+
   const toolbar = [
     {
       id: 'saveView',
@@ -76,223 +134,212 @@ function App() {
     }
   ];
 
+  const updatePersistedGridFilters = () => {
+    const grid = gridRef.current;
+    if (!grid) return;
 
+    const persistedStr = grid.getPersistData();
+    if (!persistedStr) return;
 
-const updatePersistedGridFilters = () => {
-  const grid = gridRef.current;
-  if (!grid) return;
+    let persisted = JSON.parse(persistedStr);
 
-  const persistedStr = grid.getPersistData();
-  if (!persistedStr) return;
+    const fsBase = persisted.filterSettings ?? {};
+    fsBase.type = fsBase.type ?? 'Excel';
+    fsBase.mode = fsBase.mode ?? 'OnEnter';
+    fsBase.enableCaseSensitivity = fsBase.enableCaseSensitivity ?? false;
+    fsBase.ignoreAccent = fsBase.ignoreAccent ?? false;
 
-  let persisted;
-  persisted = JSON.parse(persistedStr);
+    const currentColumns = grid.getColumns();
 
-  // Normalize filterSettings defaults
-  const fsBase = persisted.filterSettings ?? {};
-  fsBase.type = fsBase.type ?? 'Excel';
-  fsBase.mode = fsBase.mode ?? 'OnEnter';
-  fsBase.enableCaseSensitivity = fsBase.enableCaseSensitivity ?? false;
-  fsBase.ignoreAccent = fsBase.ignoreAccent ?? false;
+    if (persisted.columns && Array.isArray(persisted.columns)) {
+      persisted.columns.forEach((persistedCol: any) => {
+        const liveCol = currentColumns.find((col: any) => col.field === persistedCol.field);
+        if (liveCol) {
+          persistedCol.headerText = liveCol.headerText;
+        }
+      });
+    }
 
-  const currentColumns = grid.getColumns();
+    localStorage.setItem('gridTicketDetailsFullState', JSON.stringify(persisted));
 
-  if (persisted.columns && Array.isArray(persisted.columns)) {
-    persisted.columns.forEach((persistedCol: Column) => {
-      const liveCol = currentColumns.find((col:Column) => col.field === persistedCol.field);
-      if (liveCol) {
-        persistedCol.headerText = liveCol.headerText;
+    const createSnapshot = (field: string, value: string, keySuffix: string) => {
+      const snapshot = structuredClone(persisted);
+
+      if (keySuffix === 'ALL') {
+        snapshot.filterSettings = { ...fsBase, columns: [] };
+        snapshot.sortSettings = { columns: [] };
+      } else {
+        snapshot.filterSettings = {
+          ...fsBase,
+          columns: [{
+            field,
+            value,
+            operator: 'equal',
+            predicate: 'and',
+            type: 'string',
+            matchCase: false,
+            ignoreAccent: false
+          }]
+        };
       }
-    });
-  }
 
-  // Save enhanced full state
-  localStorage.setItem('gridTicketDetailsFullState', JSON.stringify(persisted));
-
-  // Helper to create filtered snapshots
-  const createSnapshot = (field: string, value: string, keySuffix: string) => {
-    const snapshot = { ...persisted };
-    snapshot.filterSettings = {
-      ...fsBase,
-      columns: [{
-        field,
-        value,
-        operator: 'equal',
-        predicate: 'and',
-        type: 'string',
-        matchCase: false,
-        ignoreAccent: false
-      }]
+      localStorage.setItem(`gridTicketDetails${keySuffix}`, JSON.stringify(snapshot));
     };
-    localStorage.setItem(`gridTicketDetails${keySuffix}`, JSON.stringify(snapshot));
+
+    createSnapshot('priority', 'Critical', 'Critical');
+    createSnapshot('priority', 'High', 'High');
+    createSnapshot('priority', 'Premium', 'Premium');
+    createSnapshot('all', 'ALL', 'ALL');
   };
 
-  createSnapshot('priority', 'Critical', 'Critical');
-  createSnapshot('priority', 'High', 'High');
-  createSnapshot('priority', 'Premium', 'Premium');
- 
-};
+  const restoreFavorites = (treeObj: TreeViewComponent | null) => {
+    if (!treeObj) return;
 
-// 2. Function to restore favorites in TreeView
-const restoreFavorites = (treeObj: TreeViewComponent | null) => {
-  if (!treeObj) return;
+    const FAV_KEY = 'fav-parent';
+    const storedFav = localStorage.getItem(FAV_KEY);
+    if (!storedFav) return;
 
-  const FAV_KEY = 'fav-parent';
-  const storedFav = localStorage.getItem(FAV_KEY);
-  if (!storedFav) return;
+    let favoritesList: FavoriteItem[] = [];
+    try {
+      favoritesList = JSON.parse(storedFav);
+    } catch (e) {
+      console.error('Failed to parse favorites', e);
+      return;
+    }
 
-  let favoritesList: FavoriteItem[] = [];
-  try {
-    favoritesList = JSON.parse(storedFav);
-  } catch (e) {
-    console.error('Failed to parse favorites', e);
-    return;
-  }
+    if (favoritesList.length === 0) return;
 
-  if (favoritesList.length === 0) return;
+    const favoritesParentId = 'favorites-root';
 
-  const favoritesParentId = 'favorites-root';
+    const existingParent = treeObj.getTreeData().some((node) => node.nodeId === favoritesParentId);
+    if (!existingParent) {
+      treeObj.addNodes([{
+        nodeId: favoritesParentId,
+        nodeText: 'Favorites',
+        iconCss: 'e-icons e-star-filled',
+        hasChildren: true,
+        expanded: true
+      }]);
+    }
 
-  // Add parent node if missing
-  const existingParent = treeObj.getTreeData().some((node) => node.nodeId === favoritesParentId);
-  if (!existingParent) {
-    treeObj.addNodes([{
-      nodeId: favoritesParentId,
-      nodeText: 'Favorites',
-      iconCss: 'e-icons e-star-filled',
-      hasChildren: true,
-      expanded: true
-    }]);
-  }
+    const existingNames = new Set(
+      treeObj.getTreeData()
+        .filter((node) => node.parentID === favoritesParentId)
+        .map((node) => node.nodeText)
+    );
 
-  // Prevent duplicates by nodeText
-  const existingNames = new Set(
-    treeObj.getTreeData()
-      .filter((node) => node.parentID === favoritesParentId)
-      .map((node) => node.nodeText)
-  );
+    const nodesToAdd = favoritesList
+      .filter(item => !existingNames.has(item.name))
+      .map((item, idx) => ({
+        nodeId: `fav-${item.name.replace(/\s+/g, '-')}-${Date.now()}-${idx}`,
+        nodeText: item.name,
+        iconCss: 'e-icons e-star',
+        storageKey: item.key
+      }));
 
-  const nodesToAdd = favoritesList
-    .filter(item => !existingNames.has(item.name))
-    .map((item, idx) => ({
-      nodeId: `fav-${item.name.replace(/\s+/g, '-')}-${Date.now()}-${idx}`,
-      nodeText: item.name,
-      iconCss: 'e-icons e-star',
-      storageKey: item.key
-    }));
+    if (nodesToAdd.length > 0) {
+      treeObj.addNodes(nodesToAdd, favoritesParentId);
+    }
+  };
 
-  if (nodesToAdd.length > 0) {
-    treeObj.addNodes(nodesToAdd, favoritesParentId);
-  }
-};
+  useEffect(() => {
+     updatePersistedGridFilters();
+     restoreFavorites(treeViewRef.current);
+  }, []);
 
-// 3. Single useEffect that runs both initializations
-useEffect(() => {
-  // Run grid persistence update
-  updatePersistedGridFilters();
-
-  // Run favorites restoration
-  const treeObj = treeViewRef.current;
-  restoreFavorites(treeObj);
-}, []); 
-  
-
-  const toolbarClick = useCallback((args:ClickEventArgs) => {
+  const toolbarClick = useCallback((args: ClickEventArgs) => {
     if (args.item.id === 'downloadExcel') {
       gridRef.current?.excelExport();
-    } 
+    }
     else if (args.item.id === 'saveView') {
       if (textboxObj.current) textboxObj.current.value = '';
       setVisible(true);
-    } 
+    }
   }, []);
 
-const onSaveLayout = useCallback(() => {
-  const layoutName = textboxObj.current?.value?.trim();
-  if (!layoutName) return;
+  const onSaveLayout = useCallback(() => {
+    const layoutName = textboxObj.current?.value?.trim();
+    if (!layoutName) return;
 
-  const storageKey = gridId + layoutName;
+    const storageKey = gridId + layoutName;
 
-  // 1. Get & enhance current grid state
-  const persistDataStr = gridRef.current?.getPersistData();
-  if (!persistDataStr) return;
+    const persistDataStr = gridRef.current?.getPersistData();
+    if (!persistDataStr) return;
 
-  let persistData = JSON.parse(persistDataStr);
+    let persistData = JSON.parse(persistDataStr);
 
-  // Restore correct header texts
-  const currentColumns = gridRef.current?.getColumns() || [];
-  if (persistData.columns?.length) {
-    persistData.columns.forEach((col: Column) => {
-      const live = currentColumns.find((c:Column) => c.field === col.field);
-      if (live?.headerText) col.headerText = live.headerText;
-    });
-  }
+    // Save both color mappings with the view
+    persistData.customSettings = {
+      statusColors: DEFAULT_STATUS_COLORS,
+      priorityColors: DEFAULT_PRIORITY_COLORS
+    };
 
-  // 2. Save the layout state
-  localStorage.setItem(storageKey, JSON.stringify(persistData));
+    // Restore correct header texts
+    const currentColumns = gridRef.current?.getColumns() || [];
+    if (persistData.columns?.length) {
+      persistData.columns.forEach((col: Column) => {
+        const live = currentColumns.find((c: Column) => c.field === col.field);
+        if (live?.headerText) col.headerText = live.headerText;
+      });
+    }
 
-  // 3. Update the master favorites list in localStorage
-  const FAV_KEY = 'fav-parent';
-  let favorites: FavoriteItem[] = [];
-  const stored = localStorage.getItem(FAV_KEY);
-  if (stored) {
-    try { favorites = JSON.parse(stored); } catch {}
-  }
+    localStorage.setItem(storageKey, JSON.stringify(persistData));
 
-  if (!favorites.some(f => f.name === layoutName)) {
-    favorites.push({ name: layoutName, key: storageKey });
-    localStorage.setItem(FAV_KEY, JSON.stringify(favorites));
-  }
+    const FAV_KEY = 'fav-parent';
+    let favorites: FavoriteItem[] = [];
+    const stored = localStorage.getItem(FAV_KEY);
+    if (stored) {
+      try { favorites = JSON.parse(stored); } catch { }
+    }
 
-  // 4. Add the new view to TreeView — using the same safe pattern as restoreFavorites
-  const tree = treeViewRef.current;
-  if (!tree) {
-    setVisible(false);
-    return;
-  }
+    if (!favorites.some(f => f.name === layoutName)) {
+      favorites.push({ name: layoutName, key: storageKey });
+      localStorage.setItem(FAV_KEY, JSON.stringify(favorites));
+    }
 
-  const favoritesParentId = 'favorites-root';
+    const tree = treeViewRef.current;
+    if (!tree) {
+      setVisible(false);
+      return;
+    }
 
-  // Ensure Favorites parent exists
-  const parentExists = tree.getTreeData().some((node: any) => node.nodeId === favoritesParentId);
-  if (!parentExists) {
+    const favoritesParentId = 'favorites-root';
+
+    const parentExists = tree.getTreeData().some((node: any) => node.nodeId === favoritesParentId);
+    if (!parentExists) {
+      tree.addNodes([{
+        nodeId: favoritesParentId,
+        nodeText: 'Favorites',
+        iconCss: 'e-icons e-star-filled',
+        hasChildren: true,
+        expanded: true,
+      }]);
+    }
+
+    const existingNames = new Set(
+      tree.getTreeData()
+        .filter((node: any) => node.parentID === favoritesParentId)
+        .map((node: any) => node.nodeText)
+    );
+
+    if (existingNames.has(layoutName)) {
+      setVisible(false);
+      return;
+    }
+
+    const uniqueNodeId = `fav-${layoutName.replace(/\s+/g, '-')}-${Date.now()}`;
+
     tree.addNodes([{
-      nodeId: favoritesParentId,
-      nodeText: 'Favorites',
-      iconCss: 'e-icons e-star-filled',
-      hasChildren: true,
-      expanded: true,
-    }]);
-  }
+      nodeId: uniqueNodeId,
+      nodeText: layoutName,
+      iconCss: 'e-icons e-star',
+      storageKey: storageKey,
+    }], favoritesParentId);
 
-  // Prevent duplicate by checking existing nodeText under Favorites
-  const existingNames = new Set(
-    tree.getTreeData()
-      .filter((node: any) => node.parentID === favoritesParentId)
-      .map((node: any) => node.nodeText)
-  );
-
-  if (existingNames.has(layoutName)) {
     setVisible(false);
-    return; // Already exists
-  }
+  }, []);
 
-  // Create unique nodeId (safe and consistent with restoreFavorites)
-  const uniqueNodeId = `fav-${layoutName.replace(/\s+/g, '-')}-${Date.now()}`;
-
-  // Add the new favorite child node
-  tree.addNodes([{
-    nodeId: uniqueNodeId,
-    nodeText: layoutName,
-    iconCss: 'e-icons e-star',
-    storageKey: storageKey,
-  }], favoritesParentId);
-
-  setVisible(false);
-}, []);
-
-
-const onCancel = useCallback(() => {
+  const onCancel = useCallback(() => {
     setVisible(false);
   }, []);
 
@@ -312,14 +359,13 @@ const onCancel = useCallback(() => {
     }
   ], [onSaveLayout, onCancel]);
 
-
-  const filterSettings : FilterSettingsModel = { type: 'Excel' };
+  const filterSettings: FilterSettingsModel = { type: 'Excel' };
 
   const memoGrid = useMemo(() => (
     <GridComponent
       id="gridTicketDetails"
-      height="400px"
       width="100%"
+      height="100%"
       dataSource={ticketDetails}
       allowPaging={true}
       allowExcelExport={true}
@@ -331,7 +377,7 @@ const onCancel = useCallback(() => {
       ej2StatePersistenceVersion={gridVersion}
       ref={gridRef}
       filterSettings={filterSettings}
-      pageSettings={{ pageSize: 10 }} 
+      pageSettings={{ pageSize: 10 }}
     >
       <ColumnsDirective>
         {columns.map((col, index) => (
@@ -340,134 +386,166 @@ const onCancel = useCallback(() => {
       </ColumnsDirective>
       <Inject services={[Sort, Toolbar, ExcelExport, Filter, Page]} />
     </GridComponent>
-  ), [toolbar, toolbarClick, columns, gridVersion]);
+  ), [toolbar, toolbarClick, columns, gridVersion, filterSettings]);
 
+  const onFavoriteSelect = useCallback((args: NodeSelectEventArgs) => {
+    const key = gridId + (args.nodeData.text || '');
+    const raw = localStorage.getItem(key);
+    if (!raw) return;
 
-const onFavoriteSelect = (storageKey:NodeSelectEventArgs) => {
-  const key = gridId + storageKey.nodeData.text;
-  const raw = localStorage.getItem(key);
-  if (!raw) return;
+    let fullState;
+    try {
+      fullState = JSON.parse(raw);
+    } catch (e) {
+      console.error("Invalid saved view data", e);
+      return;
+    }
 
-  let fullState;
-  fullState = JSON.parse(raw);
-  const grid = gridRef.current;
-  if (!grid) return;
+    const grid = gridRef.current;
+    if (!grid) return;
 
-  grid.setProperties(fullState);
-};
+    // Default templates
+    let statusTemplate = createStatusTemplate(DEFAULT_STATUS_COLORS);
+    let priorityTemplate = createPriorityTemplate(DEFAULT_PRIORITY_COLORS);
 
-
-const ContextMenuBeforeOpen = (args: BeforeOpenCloseMenuEventArgs) => {
-  const treeObj = treeViewRef.current;
-  if (!treeObj) {
-    args.cancel = true;
-    return;
-  }
-
-  const target = (args as any).event.target.closest('.e-level-2');
-  if (!target) {
-    args.cancel = true;
-    return;
-  }
-};
-
-  const onContextMenuClick = (args:MenuEventArgs) => {
-
-  const treeObj = treeViewRef.current;
-  if (!treeObj) return;
-
-  // Get the currently selected (right-clicked) node
-  const targetNodeId = treeObj.selectedNodes[0];
-  if (!targetNodeId) return;
-
-  // Get full node data
-  const clickedNode = treeObj.getNode(targetNodeId);
-  if (!clickedNode) return;
-
-  // Only allow "Remove View" action on child nodes inside Favorites
-  if (args.item.text === "Remove View") {
-    // Safety check: ensure it's a child of Favorites
-   
-
-    const layoutName = clickedNode.text;     
-    const storageKey = gridId + layoutName; 
-
-    // 1. Remove node from TreeView
-    treeObj.removeNodes([targetNodeId]);
-
-    // 2. Remove the saved grid layout from localStorage
-    localStorage.removeItem(storageKey);
-
-    // 3. Update the shared favorites tracking list (if you store names separately)
-    const FAV_KEY = 'fav-parent'; // or whatever key you use to track favorite names
-    const stored = localStorage.getItem(FAV_KEY);
-
-    if (stored) {
-      let favoritesList = JSON.parse(stored);
-      favoritesList = favoritesList.filter((item:FavoriteItem) => item.name !== layoutName);
-
-      if (favoritesList.length > 0) {
-        localStorage.setItem(FAV_KEY, JSON.stringify(favoritesList));
-      } else {
-        localStorage.removeItem(FAV_KEY);
+    // Override with saved colors if available
+    if (fullState.customSettings) {
+      if (fullState.customSettings.statusColors) {
+        statusTemplate = createStatusTemplate(fullState.customSettings.statusColors);
+      }
+      if (fullState.customSettings.priorityColors) {
+        priorityTemplate = createPriorityTemplate(fullState.customSettings.priorityColors);
       }
     }
 
-    // 4. If no more children in Favorites → remove the parent folder
-    const favoritesRoot = treeObj.getNode('favorites-root');
-    if (favoritesRoot && (!favoritesRoot.hasChildren)) {
-      treeObj.removeNodes(['favorites-root']);
-      localStorage.removeItem(FAV_KEY); // cleanup
+    // Update columns with correct templates
+    setColumns(prevCols =>
+      prevCols.map(col => {
+        if (col.field === "status") {
+          return { ...col, template: statusTemplate };
+        }
+        if (col.field === "priority") {
+          return { ...col, template: priorityTemplate };
+        }
+        return col;
+      })
+    );
+
+    // Apply the saved grid state
+    grid.setProperties(fullState);
+
+  }, []);
+
+  const ContextMenuBeforeOpen = (args: BeforeOpenCloseMenuEventArgs) => {
+    const treeObj = treeViewRef.current;
+    if (!treeObj) {
+      args.cancel = true;
+      return;
     }
-  }
-};
 
+    const target = (args as any).event.target.closest('.e-level-2');
+    if (!target) {
+      args.cancel = true;
+      return;
+    }
+  };
 
-  return (
-    <div className="container">
-      <SidebarComponent
-        id="default-sidebar"
-        enableGestures ={false}
-        width= {Math.floor(window.innerWidth / 6)}
-      >
-        <div className="container-header">
-          <span className="container-subtitle">Views</span>
-        </div>
-      
-         <div>
-          <TreeViewComponent 
-              id='main-treeview' 
-              enablePersistence={true}  
-              ref={treeViewRef} 
-              fields={TreeViewfields} 
-              expandOn='Click' 
-              nodeSelected={onFavoriteSelect}
-             />
-         </div>
-         <div>
-          <ContextMenuComponent id="contentmenutree" target='#main-treeview' items={contextmenuItem} beforeOpen={ContextMenuBeforeOpen} select={onContextMenuClick} ref={menuObj}/>
-         </div>
-      </SidebarComponent>
+  const onContextMenuClick = (args: MenuEventArgs) => {
+    const treeObj = treeViewRef.current;
+    if (!treeObj) return;
 
-      <div className="content">
-        <header className="container-header">
-          <div className="header-content">
-            <h1 className="container-title">Ticket Insights & Management</h1>
-            <p className="container-subtitle">
-              Save, Load, and Download your custom grid views. Powered by localStorage!
-            </p>
+    const targetNodeId = treeObj.selectedNodes[0];
+    if (!targetNodeId) return;
+
+    const clickedNode = treeObj.getNode(targetNodeId);
+    if (!clickedNode) return;
+
+    if (args.item.text === "Remove View") {
+      const layoutName = clickedNode.text;
+      const storageKey = gridId + layoutName;
+
+      treeObj.removeNodes([targetNodeId]);
+
+      localStorage.removeItem(storageKey);
+
+      const FAV_KEY = 'fav-parent';
+      const stored = localStorage.getItem(FAV_KEY);
+
+      if (stored) {
+        let favoritesList = JSON.parse(stored);
+        favoritesList = favoritesList.filter((item: FavoriteItem) => item.name !== layoutName);
+
+        if (favoritesList.length > 0) {
+          localStorage.setItem(FAV_KEY, JSON.stringify(favoritesList));
+        } else {
+          localStorage.removeItem(FAV_KEY);
+        }
+      }
+
+      const favoritesRoot = treeObj.getNode('favorites-root');
+      if (favoritesRoot && (!favoritesRoot.hasChildren)) {
+        treeObj.removeNodes(['favorites-root']);
+        localStorage.removeItem(FAV_KEY);
+      }
+    }
+  };
+    return (
+    <div className="ticket-main-container">
+      <div className="ticket-content-wrapper">
+        <div className="ticket-content-area">
+          <header className="container-header">
+            <div className="header-content">
+              <h1 className="container-title">Ticket Insights & Management</h1>
+            </div>
+          </header>
+
+          <div className="grid-container">
+            {memoGrid}
           </div>
-        </header> 
-
-        <div className="grid-wrapper">
-          {memoGrid}
         </div>
       </div>
+
+      <SidebarComponent
+        id="ticket-sidebar"
+     
+        className="sidebar-views"
+        width="220px"
+        target=".ticket-content-wrapper"
+        type="Auto"
+        isOpen={true}
+        enableGestures={false}
+      >
+        <div className="sidebar-header">
+          <span className="sidebar-title">Views</span>
+        </div>
+
+        <div>
+          <TreeViewComponent
+            id='main-treeview'
+            enablePersistence={true}
+            ref={treeViewRef}
+            fields={TreeViewfields}
+            expandOn='Click'
+            nodeSelected={onFavoriteSelect}
+          />
+        </div>
+
+        <div>
+          <ContextMenuComponent
+            id="contentmenutree"
+            target='#main-treeview'
+            items={contextmenuItem}
+            beforeOpen={ContextMenuBeforeOpen}
+            select={onContextMenuClick}
+            ref={menuObj}
+          />
+        </div>
+      </SidebarComponent>
 
       <DialogComponent
         ref={dialogRef}
         header="Save View"
-        target=".container"
+        target=".ticket-main-container"
         showCloseIcon={true}
         width="380px"
         isModal={true}
