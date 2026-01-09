@@ -21,7 +21,7 @@ import { ticketDetails} from '../data/ticketDetails';
 import { viewData } from '../data/treeViewData';
 
 import '../styles/ticketDetails.css'
-import { FavoriteItem} from '../types/ticketDetails_type';
+import { FavoriteItem, GridColumn, TreeNode} from '../types/ticketDetails_type';
 
 function App() {
    const gridRef = useRef<GridComponent | null>(null);
@@ -99,7 +99,7 @@ const updatePersistedGridFilters = () => {
 
   if (persisted.columns && Array.isArray(persisted.columns)) {
     persisted.columns.forEach((persistedCol: Column) => {
-      const liveCol = currentColumns.find(col => col.field === persistedCol.field);
+      const liveCol = currentColumns.find((col:Column) => col.field === persistedCol.field);
       if (liveCol) {
         persistedCol.headerText = liveCol.headerText;
       }
@@ -154,7 +154,7 @@ const restoreFavorites = (treeObj: TreeViewComponent | null) => {
   const favoritesParentId = 'favorites-root';
 
   // Add parent node if missing
-  const existingParent = treeObj.getTreeData().some((node) => node.nodeId === favoritesParentId);
+  const existingParent = treeObj.getTreeData().some((node:TreeNode) => node.nodeId === favoritesParentId);
   if (!existingParent) {
     treeObj.addNodes([{
       nodeId: favoritesParentId,
@@ -168,8 +168,8 @@ const restoreFavorites = (treeObj: TreeViewComponent | null) => {
   // Prevent duplicates by nodeText
   const existingNames = new Set(
     treeObj.getTreeData()
-      .filter((node) => node.parentID === favoritesParentId)
-      .map((node) => node.nodeText)
+      .filter((node:TreeNode) => node.parentID === favoritesParentId)
+      .map((node:TreeNode) => node.nodeText)
   );
 
   const nodesToAdd = favoritesList
@@ -223,7 +223,7 @@ const onSaveLayout = useCallback(() => {
   const currentColumns = gridRef.current?.getColumns() || [];
   if (persistData.columns?.length) {
     persistData.columns.forEach((col: Column) => {
-      const live = currentColumns.find(c => c.field === col.field);
+      const live = currentColumns.find((c:Column) => c.field === col.field);
       if (live?.headerText) col.headerText = live.headerText;
     });
   }
