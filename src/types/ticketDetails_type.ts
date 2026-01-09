@@ -4,21 +4,22 @@ export type FavoriteItem = {
 };
 
 
+
 export interface TreeNode {
-  nodeId: string;            // unique id
-  nodeText: string;          // display text
-  iconCss?: string;          // CSS classes for icon
-  hasChildren?: boolean;     // indicates lazy children or structural parent
-  expanded?: boolean;        // initial expanded state
-  selected?: boolean;        // initial selected state
-  isChecked?: boolean;       // for checkbox TreeView scenarios
-  imageUrl?: string;  
-  parentID?: string | number;      // optional image (if used)
-  navigateUrl?: string;      // optional navigation (if used)
-  children?: TreeNode[];     // child nodes (if available)
-  // Add any app-specific metadata:
+  nodeId: string;
+  nodeText: string;
+  iconCss?: string;
+  hasChildren?: boolean;
+  expanded?: boolean;
+  selected?: boolean;
+  isChecked?: boolean;
+  imageUrl?: string;
+  parentID?: string | number;
+  navigateUrl?: string;
+  children?: TreeNode[];
   meta?: Record<string, unknown>;
 }
+
 
 
 // Define the shape of each column

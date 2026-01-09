@@ -154,7 +154,7 @@ const restoreFavorites = (treeObj: TreeViewComponent | null) => {
   const favoritesParentId = 'favorites-root';
 
   // Add parent node if missing
-  const existingParent = treeObj.getTreeData().some((node:TreeNode) => node.nodeId === favoritesParentId);
+  const existingParent = treeObj.getTreeData().some((node) => node.nodeId === favoritesParentId);
   if (!existingParent) {
     treeObj.addNodes([{
       nodeId: favoritesParentId,
@@ -168,8 +168,8 @@ const restoreFavorites = (treeObj: TreeViewComponent | null) => {
   // Prevent duplicates by nodeText
   const existingNames = new Set(
     treeObj.getTreeData()
-      .filter((node:TreeNode) => node.parentID === favoritesParentId)
-      .map((node:TreeNode) => node.nodeText)
+      .filter((node) => node.parentID === favoritesParentId)
+      .map((node) => node.nodeText)
   );
 
   const nodesToAdd = favoritesList
