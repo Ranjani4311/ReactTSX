@@ -206,21 +206,20 @@ useEffect(() => {
       setVisible(true);
     } 
   }, []);
-  
- 
+
 const onSaveLayout = useCallback(() => {
-  const layoutName = textboxObj.current?.value.trim();
+  const layoutName = textboxObj.current?.value?.trim();
   if (!layoutName) return;
 
   const storageKey = gridId + layoutName;
 
-  // 1. Get & enhance current state
+  // 1. Get & enhance current grid state
   const persistDataStr = gridRef.current?.getPersistData();
   if (!persistDataStr) return;
 
   let persistData = JSON.parse(persistDataStr);
 
-  // Enhance headerText
+  // Restore correct header texts
   const currentColumns = gridRef.current?.getColumns() || [];
   if (persistData.columns?.length) {
     persistData.columns.forEach((col: Column) => {
@@ -229,99 +228,69 @@ const onSaveLayout = useCallback(() => {
     });
   }
 
-  // 2. Save grid state
+  // 2. Save the layout state
   localStorage.setItem(storageKey, JSON.stringify(persistData));
 
-  // 3. Update favorites list (single source of truth)
+  // 3. Update the master favorites list in localStorage
   const FAV_KEY = 'fav-parent';
   let favorites: FavoriteItem[] = [];
   const stored = localStorage.getItem(FAV_KEY);
-
   if (stored) {
     try { favorites = JSON.parse(stored); } catch {}
   }
 
-  // Prevent duplicates
   if (!favorites.some(f => f.name === layoutName)) {
     favorites.push({ name: layoutName, key: storageKey });
-
-    // ← This is the key line!
     localStorage.setItem(FAV_KEY, JSON.stringify(favorites));
   }
 
-  // 4. Immediately add to TreeView (no need to wait for reload)
+  // 4. Add the new view to TreeView — using the same safe pattern as restoreFavorites
   const tree = treeViewRef.current;
-  if (tree) {
-    const parentId = 'favorites-root';
-
-    // Make sure parent exists
-    if (!tree.getNode(parentId)) {
-      tree.addNodes([{
-        nodeId: parentId,
-        nodeText: 'Favorites',
-        iconCss: 'e-icons e-star-filled',
-        hasChildren: true,
-        expanded: true
-      }]);
-    }
-
-    // Add the new child
-    tree.addNodes([{
-      nodeId: `fav-${Date.now()}`,
-      nodeText: layoutName,
-      iconCss: 'e-icons e-star',
-      storageKey: storageKey
-    }], parentId);
+  if (!tree) {
+    setVisible(false);
+    return;
   }
-  addFavoriteToTreeAndStorage(layoutName, storageKey);
 
-  setVisible(false);
-  }, []);
+  const favoritesParentId = 'favorites-root';
 
-const addFavoriteToTreeAndStorage = useCallback((name: string, storageKey: string) => {
-  const tree = treeViewRef.current;
-  if (!tree) return;
-
-  const parentId = 'favorites-root';
-
-  // Ensure parent
-  if (!tree.getNode(parentId)) {
+  // Ensure Favorites parent exists
+  const parentExists = tree.getTreeData().some((node: any) => node.nodeId === favoritesParentId);
+  if (!parentExists) {
     tree.addNodes([{
-      nodeId: parentId,
+      nodeId: favoritesParentId,
       nodeText: 'Favorites',
       iconCss: 'e-icons e-star-filled',
       hasChildren: true,
-      expanded: true
+      expanded: true,
     }]);
   }
 
-  // Avoid duplicate nodes
-  const existing = tree.getTreeData().some(n => 
-    n.parentID === parentId && n.nodeText === name
+  // Prevent duplicate by checking existing nodeText under Favorites
+  const existingNames = new Set(
+    tree.getTreeData()
+      .filter((node: any) => node.parentID === favoritesParentId)
+      .map((node: any) => node.nodeText)
   );
 
-  if (existing) return;
+  if (existingNames.has(layoutName)) {
+    setVisible(false);
+    return; // Already exists
+  }
 
+  // Create unique nodeId (safe and consistent with restoreFavorites)
+  const uniqueNodeId = `fav-${layoutName.replace(/\s+/g, '-')}-${Date.now()}`;
+
+  // Add the new favorite child node
   tree.addNodes([{
-    nodeId: `fav-${Date.now()}`,
-    nodeText: name,
+    nodeId: uniqueNodeId,
+    nodeText: layoutName,
     iconCss: 'e-icons e-star',
-    storageKey
-  }], parentId);
+    storageKey: storageKey,
+  }], favoritesParentId);
 
-  // Update persistent list
-  const FAV_KEY = 'fav-parent';
-  let list: FavoriteItem[] = [];
-  const raw = localStorage.getItem(FAV_KEY);
-  if (raw) {
-    try { list = JSON.parse(raw); } catch {}
-  }
-
-  if (!list.some(item => item.name === name)) {
-    list.push({ name, key: storageKey });
-    localStorage.setItem(FAV_KEY, JSON.stringify(list));
-  }
+  setVisible(false);
 }, []);
+
 
 const onCancel = useCallback(() => {
     setVisible(false);
@@ -353,6 +322,7 @@ const onCancel = useCallback(() => {
       width="100%"
       dataSource={ticketDetails}
       allowPaging={true}
+      allowExcelExport={true}
       allowSorting={true}
       allowFiltering={true}
       toolbar={toolbar}
