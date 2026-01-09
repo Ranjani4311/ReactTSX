@@ -15,6 +15,7 @@ The Ticket Insights & Management is a modern React application built with Syncfu
 6. Delete Layout : Remove unwanted saved views by the delete icon.
 
 # Project Structure
+```
 
 ├─ src/
 │  ├─ components/
@@ -33,7 +34,9 @@ The Ticket Insights & Management is a modern React application built with Syncfu
 │  ├─ main.css                         # Global app styles (layout, fonts, theming)
 │  ├─ main.tsx                         # App entry: renders root component, imports global CSS
 │
-├─ index.html                          # HTML template
+├─ index.html                          # HTML
+
+```
 
 
 ### Implementation Details
