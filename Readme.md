@@ -50,7 +50,8 @@ The Ticket Insights & Management is a modern React application built with Syncfu
 5. A SidebarComponent is rendered on the left side of the application.
     - Inside the sidebar, a TreeViewComponent displays all saved views.
     - Default Sidebar Views:
-        1. Premium
+        1. All
+        2. Premium
         2. Critical
         3. High
     - When you click a view, the grid shows tickets filtered by that priority (Critical, Premium, High).
