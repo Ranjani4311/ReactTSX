@@ -165,7 +165,7 @@ function App() {
     const createSnapshot = (field: string, value: string, keySuffix: string) => {
       const snapshot = structuredClone(persisted);
 
-      if (keySuffix === 'ALL') {
+      if (keySuffix === 'All') {
         snapshot.filterSettings = { ...fsBase, columns: [] };
         snapshot.sortSettings = { columns: [] };
       } else {
@@ -189,7 +189,7 @@ function App() {
     createSnapshot('priority', 'Critical', 'Critical');
     createSnapshot('priority', 'High', 'High');
     createSnapshot('priority', 'Premium', 'Premium');
-    createSnapshot('all', 'ALL', 'ALL');
+    createSnapshot('all', 'All', 'All');
   };
 
   const restoreFavorites = (treeObj: TreeViewComponent | null) => {
@@ -389,6 +389,7 @@ function App() {
   ), [toolbar, toolbarClick, columns, gridVersion, filterSettings]);
 
   const onFavoriteSelect = useCallback((args: NodeSelectEventArgs) => {
+    debugger
     const key = gridId + (args.nodeData.text || '');
     const raw = localStorage.getItem(key);
     if (!raw) return;
@@ -565,10 +566,6 @@ function App() {
           />
         </div>
       </DialogComponent>
-
-      <footer className="container-footer">
-        <p>© 2026 Ticket Dashboard | Powered by Syncfusion EJ2</p>
-      </footer>
     </div>
   );
 }

@@ -96,6 +96,11 @@ body {
   background-color: #f3f4f6;
 }
 
+.e-treeview .e-list-item .e-icons.favorite-icon.small { font-size:12px;
+    align-items: center;
+    text-align: center; 
+    color: #000000;
+    margin-top: 7px;} /* red */
 
 /* Dialog Styles */
 .dialog-content { 
@@ -107,18 +112,6 @@ body {
   color: #666; 
   margin-bottom: 15px; 
   font-style: italic; 
-}
-
-/* Footer Styles */
-.container-footer {
-    text-align: center;
-    padding: 12px 16px;
-    color: #7c3aed;
-    border-top: 1px solid #e0e0e0;
-    background: #fafafa;
-    margin-top: 15px;
-    margin-left: -20px;
-    margin-right: -20px;
 }
 
 
